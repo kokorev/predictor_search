@@ -9,13 +9,11 @@ from scipy import stats
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import and_
 
-from settings import engine, Base, fns
-from sql_models import y_point, x_point, result
-from readers import netcdfReader, hdf5Reader
+from settings import engine, Base, x_config, y_config
+from sql_models import result
 
 
-
-def points_list_from_netcdf(fn, p_obj, var_name=None, lat_name ='lat', lon_name ='lon', lat_bnd = None, lon_bnd = None):
+def points_list_from_netcdf(fn, p_obj, var_name=None, lat_name='lat', lon_name='lon', lat_bnd=None, lon_bnd=None, **p):
     """
     Extract gridpoints indexes and coordinates information from netCDF file
     :param fn: path to source netcdf file
@@ -34,13 +32,13 @@ def points_list_from_netcdf(fn, p_obj, var_name=None, lat_name ='lat', lon_name 
     lon = nc.variables[lon_name]
     n_lon = lon.shape[0]
     get_ind = lambda lati, loni: lati * n_lon + loni
-    isinbounds = lambda v, bnd: bnd[0]<=v<=bnd[1] if bnd is not None else True
+    isinbounds = lambda v, bnd: bnd[0] <= v <= bnd[1] if bnd is not None else True
     if var_name is not None:
         dat = nc.variables[var_name]
-        missing_mask = dat[:,:,:].mask
+        missing_mask = dat[:, :, :].mask
         miss_data_mask = np.all(missing_mask, axis=0)
     else:
-        miss_data_mask = np.zeros((n_lat,n_lon), dtype=bool)
+        miss_data_mask = np.zeros((n_lat, n_lon), dtype=bool)
     points_list = []
     for lat_ind in range(n_lat):
         latv = lat[lat_ind]
@@ -49,8 +47,8 @@ def points_list_from_netcdf(fn, p_obj, var_name=None, lat_name ='lat', lon_name 
             lonv = lon[lon_ind]
             if miss_data_mask[lat_ind, lon_ind]: continue
             if not isinbounds(lonv, lon_bnd): continue
-            p = p_obj(ind=get_ind(lat_ind, lon_ind), lat_ind=lat_ind, lon_ind=lon_ind, lat=latv, lon=lonv)
-            points_list.append(p)
+            pt = p_obj(ind=get_ind(lat_ind, lon_ind), lat_ind=lat_ind, lon_ind=lon_ind, lat=latv, lon=lonv)
+            points_list.append(pt)
     return points_list
 
 
@@ -67,17 +65,16 @@ def add_meta():
     Adds a information about x and y points to the database
     :return:
     """
-    #todo: parameters for points_list_from_netcdf should be set in settings.py
     Session = sessionmaker(bind=engine)
     ses = Session()
-    plst = points_list_from_netcdf(fns['y'], y_point, 'rr', 'latitude', 'longitude')
+    plst = points_list_from_netcdf(**y_config)
     ses.add_all(plst)
-    plst = points_list_from_netcdf(fns['x'], x_point, 'sst', lat_bnd=(-30, 30), lon_bnd=(80, 180))
+    plst = points_list_from_netcdf(**x_config)
     ses.add_all(plst)
     ses.commit()
 
 
-def add_data(yMin, yMax, month, check_if_exist=False):
+def add_data(yMin, yMax, month, corr_func=stats.spearmanr, check_if_exist=False):
     """
     Calculate correlations between all possible point pairs for particular month.
     Correlation calculated for set interval, the interval is not saved in the database
@@ -90,14 +87,14 @@ def add_data(yMin, yMax, month, check_if_exist=False):
     However, an attempt to write to db result for a pair that alredy exist in db will rise an error.
     :return:
     """
-    #todo: reader parameters should be passed as arguments or set in settings.py
+    # todo: reader parameters should be passed as arguments or set in settings.py
     Session = sessionmaker(bind=engine)
     ses = Session()
-    x_points_lst = ses.query(x_point).all()
-    y_points_lst = ses.query(y_point).all()
-    y_conn = netcdfReader(fns['y'], 'rr', lat_name='latitude', lon_name='longitude')
+    x_points_lst = ses.query(x_config['p_obj']).all()
+    y_points_lst = ses.query(y_config['p_obj']).all()
+    y_conn = y_config['reader'](**y_config)
     y_conn.set_time_masks(yMin, yMax)
-    x_conn = hdf5Reader(fns['x'], 'sst')
+    x_conn = x_config['reader'](**x_config)
     x_conn.set_time_masks(yMin, yMax)
     if check_if_exist:
         resq = ses.query(result).filter(result.month == month)
@@ -113,21 +110,22 @@ def add_data(yMin, yMax, month, check_if_exist=False):
             x_vals = x_conn.get_predictor(x_pnt.lat_ind, x_pnt.lon_ind, month)
             mask = y_vals.mask.__invert__()
             if sum(mask) > 10:
-                r, p = stats.spearmanr(y_vals[mask], x_vals[mask])
-                r_obj = result(x_ind=x_pnt.ind, y_ind=y_pnt.ind, month=month, val=r, p=p)
+                r, pval = corr_func(y_vals[mask], x_vals[mask])
+                r_obj = result(x_ind=x_pnt.ind, y_ind=y_pnt.ind, month=month, val=r, p=pval)
                 r_obj_lst.append(r_obj)
-                icount+=1
+                icount += 1
             if icount >= 10000:
                 ses.add_all(r_obj_lst)
                 r_obj_lst = list()
                 ses.commit()
-                icount=0
+                icount = 0
     ses.commit()
 
 
 if __name__ == '__main__':
     create_db()
     add_meta()
-    yMin, yMax = 1981, 2010
-    month = 10
-    add_data(yMin, yMax, month, check_if_exist=False)
+    # yMin, yMax = 1981, 2010
+    # for month in [1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12]:
+    #     add_data(yMin, yMax, month, check_if_exist=False)
+    #     print(month)

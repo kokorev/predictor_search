@@ -2,8 +2,10 @@
 # coding=utf-8
 """
 this file defines sql models used in db
+x_point, y_point tables contain lists of predictors their indexes and coordinates
+spearman table contain calculated spearman correlations between x-y pairs
 """
-from sqlalchemy import Column, Integer, Float, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, Float, ForeignKey
 from settings import Base
 from sqlalchemy.orm import relationship
 
@@ -37,13 +39,6 @@ class result(Base):
     month = Column(Integer, primary_key=True)
     val = Column(Float)
     p = Column(Float)
-
-
-# class calculated(Base):
-#     __tablename__ = 'calc_logs'
-#     x_ind = Column(Integer, ForeignKey("x_point.ind"), nullable=False, primary_key=True)
-#     y_ind = Column(Integer, ForeignKey("y_point.ind"), nullable=False, primary_key=True)
-#     added = Column(DateTime)
 
 
 if __name__ == '__main__':

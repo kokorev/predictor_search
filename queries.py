@@ -7,8 +7,8 @@ import numpy as np
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import and_
 
-from sql_models import result, x_point, y_point
-from settings import engine
+from sql_models import result
+from settings import engine, x_config, y_config
 
 
 def mean_x_influence(month=None, f=np.mean):
@@ -21,7 +21,7 @@ def mean_x_influence(month=None, f=np.mean):
     """
     Session = sessionmaker(bind=engine)
     ses = Session()
-    x_points_lst = ses.query(x_point).all()
+    x_points_lst = ses.query(x_config['p_obj']).all()
     q = ses.query(result)
     res = []
     for pnt in x_points_lst:

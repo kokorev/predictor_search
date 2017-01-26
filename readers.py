@@ -10,7 +10,7 @@ import h5py
 
 
 class netcdfReader:
-    def __init__(self, fn, var_name, lat_name='lat', lon_name='lon', time_name='time', in_memory=True):
+    def __init__(self, fn, var_name, lat_name='lat', lon_name='lon', time_name='time', in_memory=True, **p):
         self.nc = netCDF4.Dataset(fn)
         self.lat = self.nc.variables[lat_name]
         self.lon = self.nc.variables[lon_name]
@@ -41,7 +41,7 @@ class netcdfReader:
 
 
 class hdf5Reader(netcdfReader):
-    def __init__(self, fn, var_name, lat_name='lat', lon_name='lon', time_name='time', in_memory=True):
+    def __init__(self, fn, var_name, lat_name='lat', lon_name='lon', time_name='time', in_memory=True, **p):
         self.f = h5py.File(fn, "r")
         # self.fillValue = self.f[var_name].attrs['missing_value']
         if in_memory:
