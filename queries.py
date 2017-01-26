@@ -10,7 +10,7 @@ from settings import engine, x_config
 from sql_models import result
 
 
-def mean_x_influence(month=None, f=np.mean):
+def mean_x_influence(month=None, f=np.mean, lag=0):
     """
     Estimate how influential x_point is
     get the list of all the correlations from each x_point and apply provided function to this list (mean by default)
@@ -24,7 +24,7 @@ def mean_x_influence(month=None, f=np.mean):
     q = ses.query(result)
     res = []
     for pnt in x_points_lst:
-        qr = q.filter(result.x_ind == pnt.ind)
+        qr = q.filter(and_(result.x_ind == pnt.ind, result.lag == lag))
         if month is not None:
             qr = qr.filter(result.month == month)
         rho_lst = [abs(v.val) for v in qr if v.val is not None]
@@ -34,7 +34,7 @@ def mean_x_influence(month=None, f=np.mean):
     return np.array(res)
 
 
-def get_y_point_correlations(point_ind, month):
+def get_y_point_correlations(point_ind, month, lag=0):
     """
     Return ind, x, y, z array of correlations for each x point and given y point
     :param point_ind: index of x point, if not exist res will return empty array
@@ -43,12 +43,12 @@ def get_y_point_correlations(point_ind, month):
     """
     Session = sessionmaker(bind=engine)
     ses = Session()
-    q = ses.query(result).filter(and_(result.y_ind == point_ind, result.month == month))
+    q = ses.query(result).filter(and_(result.y_ind == point_ind, result.month == month, result.lag == lag))
     res = np.array([[r.x_ind, r.x_point.lat, r.x_point.lon, r.val] for r in q])
     return res
 
 
-def get_y_group_mean_correlations(y_ind_lst, month):
+def get_y_group_mean_correlations(y_ind_lst, month, lag=0):
     """
     Return ind, x, y, z array of correlations. For each x point and given set y points mean correlation calculated.
     :param y_ind_lst: list of x point indexes
@@ -57,7 +57,7 @@ def get_y_group_mean_correlations(y_ind_lst, month):
     """
     Session = sessionmaker(bind=engine)
     ses = Session()
-    q = ses.query(result).filter(and_(result.y_ind.in_(y_ind_lst), result.month == month))
+    q = ses.query(result).filter(and_(result.y_ind.in_(y_ind_lst), result.month == month, result.lag == lag))
     dat = np.array([[r.x_ind, r.y_ind, r.x_point.lat, r.x_point.lon, r.val] for r in q])
     x_ind_lst = np.unique(dat[:, 0])
     res = []
@@ -68,7 +68,16 @@ def get_y_group_mean_correlations(y_ind_lst, month):
 
 
 if __name__ == '__main__':
-    # v = get_y_group_mean_correlations([730, 731, 732], 10)
-    # print(v)
-    r = mean_x_influence(month=10)
-    np.savetxt('res.csv', r, delimiter=',', header='ind,lat,lon,rho', comments='')
+    import os
+
+    res_path = r'..\saca_grid_explore\results\predictor_search'
+    m = 10
+    ind = 7655
+
+    # r = get_y_point_correlations(ind, m)
+    # np.savetxt(os.path.join(res_path, 'point_corrs_%i_m%02i.csv' % (ind,m)), r, delimiter=',', header='ind,lat,lon,rho',
+    #                         comments='')
+
+    r = mean_x_influence(month=m, lag=2)
+    np.savetxt(os.path.join(res_path, 'mean_influence_lag2_m%02i.csv' % m), r, delimiter=',', header='ind,lat,lon,rho',
+               comments='')

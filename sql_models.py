@@ -39,6 +39,7 @@ class result(Base):
     y_ind = Column(Integer, ForeignKey("y_point.ind"), nullable=False, primary_key=True)
     y_point = relationship("y_point", back_populates="results")
     month = Column(Integer, primary_key=True)
+    lag = Column(Integer, primary_key=True)
     val = Column(Float)
     p = Column(Float)
 

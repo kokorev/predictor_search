@@ -32,4 +32,4 @@ y_config = {
 
 home = os.getcwd()
 
-engine = create_engine('sqlite:///%s' % (os.path.join(home, 'db', 'main.sqlite')))
+engine = create_engine('sqlite:///%s' % (os.path.join(home, 'db', 'main_lags.sqlite')))

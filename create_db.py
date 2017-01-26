@@ -73,7 +73,7 @@ def add_meta():
     ses.commit()
 
 
-def add_data(yMin, yMax, month, corr_func=stats.spearmanr, check_if_exist=False):
+def add_data(yMin, yMax, month, lag=0, corr_func=stats.spearmanr, check_if_exist=False):
     """
     Calculate correlations between all possible point pairs for particular month.
     Correlation calculated for set interval, the interval is not saved in the database
@@ -106,11 +106,11 @@ def add_data(yMin, yMax, month, corr_func=stats.spearmanr, check_if_exist=False)
                 if ses.query(tq.exists()).scalar():
                     continue
             y_vals = y_conn.get_predictor(y_pnt.lat_ind, y_pnt.lon_ind, month)
-            x_vals = x_conn.get_predictor(x_pnt.lat_ind, x_pnt.lon_ind, month)
+            x_vals = x_conn.get_predictor(x_pnt.lat_ind, x_pnt.lon_ind, month - lag)
             mask = y_vals.mask.__invert__()
             if sum(mask) > 10:
                 r, pval = corr_func(y_vals[mask], x_vals[mask])
-                r_obj = result(x_ind=x_pnt.ind, y_ind=y_pnt.ind, month=month, val=r, p=pval)
+                r_obj = result(x_ind=x_pnt.ind, y_ind=y_pnt.ind, month=month, lag=lag, val=r, p=pval)
                 r_obj_lst.append(r_obj)
                 icount += 1
             if icount >= 10000:
@@ -122,9 +122,10 @@ def add_data(yMin, yMax, month, corr_func=stats.spearmanr, check_if_exist=False)
 
 
 if __name__ == '__main__':
-    create_db()
-    add_meta()
-    # yMin, yMax = 1981, 2010
+    # create_db()
+    # add_meta()
+    yMin, yMax = 1981, 2010
+    add_data(yMin, yMax, 10, lag=2, check_if_exist=False)
     # for month in [1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12]:
     #     add_data(yMin, yMax, month, check_if_exist=False)
     #     print(month)
