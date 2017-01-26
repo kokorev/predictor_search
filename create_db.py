@@ -8,9 +8,8 @@ import numpy as np
 from scipy import stats
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import and_
-
-from settings import engine, Base, x_config, y_config
-from sql_models import result
+from settings import engine, x_config, y_config
+from sql_models import Base, result
 
 
 def points_list_from_netcdf(fn, p_obj, var_name=None, lat_name='lat', lon_name='lon', lat_bnd=None, lon_bnd=None, **p):

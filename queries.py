@@ -6,9 +6,8 @@ In this file functions that extract some parameters from the dataset for further
 import numpy as np
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import and_
-
+from settings import engine, x_config
 from sql_models import result
-from settings import engine, x_config, y_config
 
 
 def mean_x_influence(month=None, f=np.mean):
@@ -69,6 +68,7 @@ def get_y_group_mean_correlations(y_ind_lst, month):
 
 
 if __name__ == '__main__':
-    v = get_y_group_mean_correlations([730, 731, 732], 10)
-    print(v)
-    # np.savetxt('res.csv', mean_x_influence(), delimiter=',', header='ind,lat,lon,rho', comments='')
+    # v = get_y_group_mean_correlations([730, 731, 732], 10)
+    # print(v)
+    r = mean_x_influence(month=10)
+    np.savetxt('res.csv', r, delimiter=',', header='ind,lat,lon,rho', comments='')

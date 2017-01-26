@@ -6,8 +6,10 @@ x_point, y_point tables contain lists of predictors their indexes and coordinate
 spearman table contain calculated spearman correlations between x-y pairs
 """
 from sqlalchemy import Column, Integer, Float, ForeignKey
-from settings import Base
+from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
+
+Base = declarative_base()
 
 
 class x_point(Base):

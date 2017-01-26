@@ -5,9 +5,7 @@ contain settings, db connection, and other common resources
 """
 from sqlalchemy import create_engine
 import os
-from sqlalchemy.ext.declarative import declarative_base
 from readers import netcdfReader, hdf5Reader
-Base = declarative_base()   # we should create Base before we could import sql models
 from sql_models import x_point, y_point
 
 
