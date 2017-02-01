@@ -4,14 +4,14 @@
 here be unittests
 """
 import unittest
-
+import os.path
 
 class test_netCDFReader(unittest.TestCase):
 
     def setUp(self):
         from readers import netcdfReader
         y_config = {
-            'fn': r'C:\data\SACA&D\grid\rr_0.5deg_regular_mon_anoms.nc',
+            'fn': os.path.join('test_data', 'test.nc'),
             'var_name': 'rr',
             'lat_name': 'latitude',
             'lon_name': 'longitude',
