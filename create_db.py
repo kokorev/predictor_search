@@ -6,10 +6,10 @@ this file contains user function for creating and filling the db
 import netCDF4
 import numpy as np
 from scipy import stats
-from sqlalchemy.orm import sessionmaker
 from sqlalchemy import and_
-from settings import engine, x_config, y_config
+from settings import engine
 from sql_models import Base, result
+from settings import Session, session
 
 
 def points_list_from_netcdf(fn, p_obj, var_name=None, lat_name='lat', lon_name='lon', lat_bnd=None, lon_bnd=None, **p):
@@ -59,21 +59,21 @@ def create_db():
     Base.metadata.create_all(engine)
 
 
-def add_meta():
+@session
+def add_meta(cfg):
     """
     Adds a information about x and y points to the database
     :return:
     """
-    Session = sessionmaker(bind=engine)
     ses = Session()
-    plst = points_list_from_netcdf(**y_config)
+    plst = points_list_from_netcdf(**cfg['y'])
     ses.add_all(plst)
-    plst = points_list_from_netcdf(**x_config)
+    plst = points_list_from_netcdf(**cfg['x'])
     ses.add_all(plst)
-    ses.commit()
 
 
-def add_data(yMin, yMax, month, lag=0, corr_func=stats.spearmanr, check_if_exist=False):
+@session
+def add_data(yMin, yMax, month, cfg, lag=0, corr_func=stats.spearmanr, check_if_exist=False):
     """
     Calculate correlations between all possible point pairs for particular month.
     Correlation calculated for set interval, the interval is not saved in the database
@@ -86,14 +86,12 @@ def add_data(yMin, yMax, month, lag=0, corr_func=stats.spearmanr, check_if_exist
     However, an attempt to write to db result for a pair that alredy exist in db will rise an error.
     :return:
     """
-    # todo: reader parameters should be passed as arguments or set in settings.py
-    Session = sessionmaker(bind=engine)
     ses = Session()
-    x_points_lst = ses.query(x_config['p_obj']).all()
-    y_points_lst = ses.query(y_config['p_obj']).all()
-    y_conn = y_config['reader'](**y_config)
+    x_points_lst = ses.query(cfg['x']['p_obj']).all()
+    y_points_lst = ses.query(cfg['y']['p_obj']).all()
+    y_conn = cfg['y']['reader'](**cfg['y'])
     y_conn.set_time_masks(yMin, yMax)
-    x_conn = x_config['reader'](**x_config)
+    x_conn = cfg['x']['reader'](**cfg['x'])
     x_conn.set_time_masks(yMin, yMax)
     if check_if_exist:
         resq = ses.query(result).filter(result.month == month)
@@ -118,14 +116,17 @@ def add_data(yMin, yMax, month, lag=0, corr_func=stats.spearmanr, check_if_exist
                 r_obj_lst = list()
                 ses.commit()
                 icount = 0
-    ses.commit()
 
 
 if __name__ == '__main__':
+    from settings import cfg
     # create_db()
-    # add_meta()
+    # add_meta(cfg)
     yMin, yMax = 1981, 2010
-    add_data(yMin, yMax, 10, lag=2, check_if_exist=False)
-    # for month in [1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12]:
-    #     add_data(yMin, yMax, month, check_if_exist=False)
-    #     print(month)
+    # add_data(yMin, yMax, 10, lag=2, check_if_exist=False)
+    for month in [3, 4, 5, 6, 7, 8, 9, 10, 11, 12]:
+        add_data(yMin, yMax, month, cfg, lag=2, check_if_exist=False)
+        print(month)
+    for month in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]:
+        add_data(yMin, yMax, month, cfg, lag=0, check_if_exist=False)
+        print(month)

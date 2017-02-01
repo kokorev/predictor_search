@@ -4,12 +4,13 @@
 In this file functions that extract some parameters from the dataset for further analysis
 """
 import numpy as np
-from sqlalchemy.orm import sessionmaker
 from sqlalchemy import and_
-from settings import engine, x_config
+from settings import cfg
 from sql_models import result
+from settings import Session, session
 
 
+@session
 def mean_x_influence(month=None, f=np.mean, lag=0):
     """
     Estimate how influential x_point is
@@ -18,9 +19,9 @@ def mean_x_influence(month=None, f=np.mean, lag=0):
     :param f: function that take a list of correlations as input and return the measure of influence
     :return: return numpy array of [ind, lat, lon, val]
     """
-    Session = sessionmaker(bind=engine)
+    # todo: move the query outside the cycle and if possible avoid cycle all together
     ses = Session()
-    x_points_lst = ses.query(x_config['p_obj']).all()
+    x_points_lst = ses.query(cfg['x']['p_obj']).all()
     q = ses.query(result)
     res = []
     for pnt in x_points_lst:
@@ -30,10 +31,10 @@ def mean_x_influence(month=None, f=np.mean, lag=0):
         rho_lst = [abs(v.val) for v in qr if v.val is not None]
         rval = f(rho_lst)
         res.append([pnt.ind, pnt.lat, pnt.lon, rval])
-    ses.close()
     return np.array(res)
 
 
+@session
 def get_y_point_correlations(point_ind, month, lag=0):
     """
     Return ind, x, y, z array of correlations for each x point and given y point
@@ -41,13 +42,13 @@ def get_y_point_correlations(point_ind, month, lag=0):
     :param month: month
     :return:
     """
-    Session = sessionmaker(bind=engine)
     ses = Session()
     q = ses.query(result).filter(and_(result.y_ind == point_ind, result.month == month, result.lag == lag))
     res = np.array([[r.x_ind, r.x_point.lat, r.x_point.lon, r.val] for r in q])
     return res
 
 
+@session
 def get_y_group_mean_correlations(y_ind_lst, month, lag=0):
     """
     Return ind, x, y, z array of correlations. For each x point and given set y points mean correlation calculated.
@@ -55,7 +56,6 @@ def get_y_group_mean_correlations(y_ind_lst, month, lag=0):
     :param month: month
     :return:
     """
-    Session = sessionmaker(bind=engine)
     ses = Session()
     q = ses.query(result).filter(and_(result.y_ind.in_(y_ind_lst), result.month == month, result.lag == lag))
     dat = np.array([[r.x_ind, r.y_ind, r.x_point.lat, r.x_point.lon, r.val] for r in q])
@@ -79,5 +79,5 @@ if __name__ == '__main__':
     #                         comments='')
 
     r = mean_x_influence(month=m, lag=2)
-    np.savetxt(os.path.join(res_path, 'mean_influence_lag2_m%02i.csv' % m), r, delimiter=',', header='ind,lat,lon,rho',
+    np.savetxt(os.path.join(res_path, r'mean_influence_lag2_m%02i.csv' % m), r, delimiter=',', header='ind,lat,lon,rho',
                comments='')
