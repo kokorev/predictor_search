@@ -29,7 +29,7 @@ def vector2array(dat, missing=-999):
     return grid, x_axis, y_axis
 
 
-def clusters(b):
+def island_search(b):
     """
     Islands search on binary array
     Search for True values
@@ -66,7 +66,7 @@ def localMaxima(grid, threshold):
     :return: list of [[x,y],] coordinates
     """
     res = []
-    clst = clusters(grid > threshold)
+    clst = island_search(grid > threshold)
     for c in clst:
         mp = np.argmax(grid[clst[c]])
         p = [clst[c][0][mp], clst[c][1][mp]]
